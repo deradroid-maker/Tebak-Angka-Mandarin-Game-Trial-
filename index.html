@@ -165,19 +165,20 @@ function draw(){
       a.className='r';a.textContent=i+1;b.className='n';b.textContent=r.name;c.className='l';c.textContent=lbl(r.best);
       li.append(a,b,c);ol.appendChild(li)});
     box.appendChild(ol)}}
+/* Papan peringkat bersama lewat Google Sheets (Apps Script) */
+const API_URL='https://script.google.com/macros/s/AKfycbwgLJ2yLUR-hHIFSbXgnpSaA3KCyy1bwKaUggx9tW8L87t_SWHJPJxd97iFQsR-qtW42w/exec';
+const api=API_URL.indexOf('https://')===0?API_URL:'';
+async function pull(){
+  if(!api)return;
+  try{const r=await fetch(api+'?aksi=daftar&t='+Date.now());const j=await r.json();
+    live=(j.rows||[]).map(x=>({name:String(x.name),best:+x.best||0,ts:+x.ts||0}));shareFail=false}
+  catch(e){shareFail=true}
+  draw()}
 async function save(nm,b){
   localSave(nm,b);
-  if(db){try{const ref=db.collection('scores').doc('p'+Array.from(nm.toLowerCase()).map(c=>c.codePointAt(0).toString(16)).join('-'));
-    const s=await ref.get(),cur=s.exists?(s.data().best||0):0;
-    if(b>cur)await ref.set({name:nm,best:b,ts:Date.now()});shareFail=false}catch(e){shareFail=true}}
-  else shareFail=true;
-  draw()}
-(async()=>{try{
-  if(window.claude&&claude.use){db=await claude.use('db');
-    if(db)db.collection('scores').orderBy('best','desc').limit(50).onSnapshot(
-      s=>{live=s.docs.map(d=>d.data());draw()},
-      ()=>{live=null;draw()})}
-}catch(e){db=null}draw()})();
+  if(api){try{await fetch(api+'?aksi=simpan&nama='+encodeURIComponent(nm)+'&level='+b)}catch(e){shareFail=true}await pull()}
+  else{shareFail=true;draw()}}
+pull();draw();
 
 /* game */
 function show(id){for(const s of ['home','game','result'])$(s).hidden=s!==id;window.scrollTo(0,0)}
